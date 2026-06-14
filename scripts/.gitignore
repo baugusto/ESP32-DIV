@@ -1,0 +1,9 @@
+# Local Arduino CLI outputs and temporary files.
+build/
+out/
+*.bin
+*.elf
+*.map
+*.hex
+*.log
+*.tmp
