@@ -16,3 +16,4 @@
 - Started real status bar state handling for Wi-Fi/BLE activity and fixed unknown battery handling in the status task.
 - Updated foreground Wi-Fi/BLE scans to force status bar redraws and drive WS2812 scan modes during active scans.
 - Kept WS2812 scan animations alive during blocking Wi-Fi/BLE scans and preserved manual scan counts in the status bar.
+- Show a USB-powered battery indicator with a lightning bolt when battery voltage is unavailable.

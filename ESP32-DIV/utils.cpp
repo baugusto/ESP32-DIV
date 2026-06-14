@@ -572,6 +572,22 @@ static uint16_t statusBarRadioColor(StatusBarRadioState state, int count, uint16
   }
 }
 
+static void drawStatusBarUsbBatteryIcon(int x, int y, uint16_t color, uint16_t bg) {
+  tft.fillRect(x, y, 26, 14, bg);
+  tft.fillRoundRect(x, y + 1, 21, 12, 2, color);
+  tft.fillRoundRect(x + 21, y + 4, 4, 6, 1, color);
+
+  const int boltX[7] = {
+    x + 11, x + 7, x + 10, x + 8, x + 15, x + 12, x + 14
+  };
+  const int boltY[7] = {
+    y + 3, y + 8, y + 8, y + 12, y + 5, y + 5, y + 3
+  };
+  tft.fillTriangle(boltX[0], boltY[0], boltX[1], boltY[1], boltX[2], boltY[2], bg);
+  tft.fillTriangle(boltX[3], boltY[3], boltX[4], boltY[4], boltX[5], boltY[5], bg);
+  tft.drawLine(boltX[2], boltY[2], boltX[3], boltY[3], bg);
+}
+
 void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator) {
   static int lastBatteryPercentage = -1;
   static int lastWifiHalf          = -100000;
@@ -650,23 +666,23 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
 
     tft.fillRect(0, 0, tft.width(), barHeight, UI_LABLE);
 
-    tft.drawRoundRect(x, y, 22, 10, 2, TFT_WHITE);
-    tft.fillRect(x + 22, y + 3, 2, 4, TFT_WHITE);
-
-    int batteryLevelWidth = batteryKnown ? ::map(batteryPercentage, 0, 100, 0, 20) : 0;
-    uint16_t batteryColor = (!batteryKnown || batteryPercentage > 20) ? TFT_GREEN : TFT_RED;
     if (batteryKnown) {
+      tft.drawRoundRect(x, y, 22, 10, 2, TFT_WHITE);
+      tft.fillRect(x + 22, y + 3, 2, 4, TFT_WHITE);
+
+      int batteryLevelWidth = ::map(batteryPercentage, 0, 100, 0, 20);
+      uint16_t batteryColor = (batteryPercentage > 20) ? TFT_GREEN : TFT_RED;
       tft.fillRoundRect(x + 2, y + 2, batteryLevelWidth, 6, 1, batteryColor);
+    } else {
+      drawStatusBarUsbBatteryIcon(x, y - 1, TFT_GREEN, UI_LABLE);
     }
 
-    tft.setCursor(x + 30, y + 2);
     tft.setTextColor(TFT_GREEN, UI_LABLE);
     tft.setTextFont(1);
     tft.setTextSize(1);
     if (batteryKnown) {
+      tft.setCursor(x + 30, y + 2);
       tft.print(String(batteryPercentage) + "%");
-    } else {
-      tft.print("--%");
     }
 
     const int iconW         = 16;
