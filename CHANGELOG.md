@@ -2,18 +2,38 @@
 
 ## Unreleased
 
-- Added ESP32-DIV V2/V2.1 project guidance in `AGENTS.md`, including ESP32-S3 constraints and Arduino CLI build/upload settings.
-- Added Arduino CLI helper scripts for compile, upload, serial monitor, and recovery upload with flash erase.
-- Added initial `BoardPins_ESP32DIV_V2.h` hardware map documenting internal, external, future hardware and known pin conflicts.
-- Fixed ESP32-S3 link conflict by making `ieee80211_raw_frame_sanity_check` weak.
-- Added non-blocking `BuzzerService` and integrated boot success and SubGHz capture beeps.
+### Build e TFT
+
+- Fixed the ESP32-S3 link conflict by making `ieee80211_raw_frame_sanity_check` weak in `wifi.cpp`.
+- Restored the TFT display on ESP32-DIV V2/V2.1 by applying the recommended local TFT_eSPI V2 `User_Setup.h` configuration.
+- Added boot diagnostics around battery read, menu draw, status bar draw, and touchscreen startup.
+
+### Buzzer
+
+- Added non-blocking `BuzzerService` with boot success and SubGHz capture feedback.
 - Confirmed the integrated buzzer on GPIO 2 and enabled `BUZZER_PIN`.
-- Made battery reads safe when `BATTERY_ADC_PIN` is not configured, avoiding `analogRead(-1)` and showing unknown battery as `--%`.
-- Added boot diagnostics around battery, menu, status bar, and touchscreen startup.
-- Documented ESP32-DIV V2/V2.1 upload recovery settings for white-screen recovery.
-- Applied the recommended local TFT_eSPI V2 `User_Setup.h` configuration outside the repository to restore the TFT display.
-- Added non-blocking `StatusLedService` for 4 WS2812B LEDs, gated by `settings().neopixelEnabled`, and enabled the confirmed DIN pin on GPIO 1.
-- Started real status bar state handling for Wi-Fi/BLE activity and fixed unknown battery handling in the status task.
-- Updated foreground Wi-Fi/BLE scans to force status bar redraws and drive WS2812 scan modes during active scans.
-- Kept WS2812 scan animations alive during blocking Wi-Fi/BLE scans and preserved manual scan counts in the status bar.
-- Show a USB-powered battery indicator with a lightning bolt when battery voltage is unavailable.
+- Tuned the boot/capture beep volume and duration for a quieter startup sound.
+
+### WS2812B status LEDs
+
+- Added non-blocking `StatusLedService` for the 4 onboard WS2812B LEDs.
+- Confirmed the WS2812B data input on GPIO 1 from the V2 schematic and enabled `STATUS_LED_PIN`.
+- Gated LED output behind `settings().neopixelEnabled`, so the LEDs remain off when NeoPixel is disabled in settings.
+- Added WS2812 feedback for boot, idle, Wi-Fi scan, BLE scan, and SubGHz capture events.
+- Kept WS2812 scan animations alive during blocking Wi-Fi/BLE scans.
+
+### Status bar and icons
+
+- Added real Wi-Fi/BLE status bar state handling for `off`, `scanning`, `active`, and `error`.
+- Updated foreground Wi-Fi/BLE scans to force status bar redraws when scanning starts and finishes.
+- Preserved manual Wi-Fi/BLE scan counts in the status bar even when auto-scan is disabled.
+- Replaced the unknown battery text with a USB-powered battery icon with a lightning bolt when battery voltage is unavailable.
+
+### Battery safety
+
+- Made battery reads safe when `BATTERY_ADC_PIN` is not configured, avoiding `analogRead(-1)`.
+- Fixed the status bar task so unknown battery voltage is not converted into a fake percentage.
+
+### Hardware map
+
+- Added initial `BoardPins_ESP32DIV_V2.h` documentation for validated pins and known future-module conflicts.
