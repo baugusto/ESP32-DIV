@@ -31,11 +31,12 @@
 /*
  * WS2812B status LEDs
  *
- * Board has 4 RGB LEDs, but the data pin still needs confirmation before a
- * runtime driver is enabled.
+ * V2 schematic: D1 DIN is driven from IO1 through R33 (1k). D1/D2 then chain
+ * through WSD to D3/D4.
  */
 #define ESP32DIV_V2_WS2812B_COUNT             4
-#define ESP32DIV_V2_WS2812B_PIN_CONFIRMED     0
+#define ESP32DIV_V2_WS2812B_PIN_CANDIDATE     1
+#define ESP32DIV_V2_WS2812B_PIN_CONFIRMED     1
 
 /*
  * Future PN532 RFID/NFC module

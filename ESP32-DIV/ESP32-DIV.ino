@@ -4,6 +4,7 @@
 #include <Wire.h>
 #include "BuzzerService.h"
 #include "SettingsStore.h"
+#include "StatusLedService.h"
 #include "Touchscreen.h"
 #include "config.h"
 #include "ducky.h"
@@ -3322,6 +3323,8 @@ void setup() {
   settingsLoad();
   applyThemeToPalette(settings().theme);
   setBrightness(settings().brightness);
+  StatusLedService::begin();
+  StatusLedService::setMode(StatusLedService::Mode::Boot);
 
 #if HAS_PCF8574_BUTTONS
   if (!initPcf8574Buttons()) {
@@ -3358,10 +3361,13 @@ void setup() {
   last_interaction_time = millis();
   Serial.println("[boot] ready");
   BuzzerService::beepSuccess();
+  StatusLedService::setMode(StatusLedService::Mode::Idle);
+  StatusLedService::event(StatusLedService::Event::BootOk);
 }
 
 void loop() {
   BuzzerService::loop();
+  StatusLedService::loop();
   applyThemeToPalette(settings().theme);
   handleButtons();
   updateStatusBar();

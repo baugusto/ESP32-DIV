@@ -12,3 +12,4 @@
 - Added boot diagnostics around battery, menu, status bar, and touchscreen startup.
 - Documented ESP32-DIV V2/V2.1 upload recovery settings for white-screen recovery.
 - Applied the recommended local TFT_eSPI V2 `User_Setup.h` configuration outside the repository to restore the TFT display.
+- Added non-blocking `StatusLedService` for 4 WS2812B LEDs, gated by `settings().neopixelEnabled`, and enabled the confirmed DIN pin on GPIO 1.

@@ -2,6 +2,7 @@
 #include <vector>
 #include "BuzzerService.h"
 #include "KeyboardUI.h"
+#include "StatusLedService.h"
 #include "Touchscreen.h"
 #include "config.h"
 #include "icon.h"
@@ -588,6 +589,7 @@ static void replayShowDetectNotice(const String& reason, int rssi = 0) {
   snprintf(msg, sizeof(msg), "%s @ %.2f MHz | RSSI %d", reason.c_str(), mhz, rssi);
   showNotificationActions("SubGHz Detected", msg, true);
   BuzzerService::beepCapture();
+  StatusLedService::event(StatusLedService::Event::CaptureSuccess);
   notifActive = true;
   notifHideAtMs = 0;
 }
