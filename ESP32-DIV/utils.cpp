@@ -464,9 +464,31 @@ bool lastSdCardState = false;
 static TaskHandle_t statusBarTaskHandle = nullptr;
 static volatile bool statusBarDirty = true;
 static constexpr uint32_t kStatusBarWardBlinkHalfMs = 900;
+static volatile StatusBarRadioState s_wifiStatus = StatusBarRadioState::Off;
+static volatile StatusBarRadioState s_bleStatus = StatusBarRadioState::Off;
 
 void requestStatusBarRedraw() {
   statusBarDirty = true;
+}
+
+void setStatusBarWifiState(StatusBarRadioState state) {
+  if (s_wifiStatus == state) return;
+  s_wifiStatus = state;
+  requestStatusBarRedraw();
+}
+
+void setStatusBarBleState(StatusBarRadioState state) {
+  if (s_bleStatus == state) return;
+  s_bleStatus = state;
+  requestStatusBarRedraw();
+}
+
+StatusBarRadioState getStatusBarWifiState() {
+  return s_wifiStatus;
+}
+
+StatusBarRadioState getStatusBarBleState() {
+  return s_bleStatus;
 }
 
 const float R1 = 100000.0;
@@ -536,10 +558,26 @@ static int statusBarTempBand(float t) {
   return 0;
 }
 
+static uint16_t statusBarRadioColor(StatusBarRadioState state, int count, uint16_t activeColor) {
+  switch (state) {
+    case StatusBarRadioState::Scanning:
+      return TFT_YELLOW;
+    case StatusBarRadioState::Active:
+      return activeColor;
+    case StatusBarRadioState::Error:
+      return TFT_RED;
+    case StatusBarRadioState::Off:
+    default:
+      return (count > 0) ? activeColor : TFT_WHITE;
+  }
+}
+
 void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator) {
   static int lastBatteryPercentage = -1;
   static int lastWifiHalf          = -100000;
   static int lastBleHalf           = -100000;
+  static StatusBarRadioState lastWifiState = StatusBarRadioState::Off;
+  static StatusBarRadioState lastBleState  = StatusBarRadioState::Off;
   static int lastTempBand          = -100;
   static int lastSdSnap            = -1;
   static bool lastWardGpsIcon      = false;
@@ -560,6 +598,8 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
 
   const int wifiHalf = wifiDevices / 2;
   const int bleHalf  = bleDevices / 2;
+  const StatusBarRadioState wifiState = getStatusBarWifiState();
+  const StatusBarRadioState bleState  = getStatusBarBleState();
 
   const bool wardGpsIcon = GpsWardriver::statusBarGpsIconActive();
   const uint32_t wardBlinkPhase =
@@ -576,7 +616,8 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
   const bool wardBlinkOnly =
       !forceUpdate && wardGpsIcon && lastWardGpsIcon &&
       (wardBlinkPhase != lastWardBlinkPhase) && !battCh && wifiHalf == lastWifiHalf &&
-      bleHalf == lastBleHalf && tempBand == lastTempBand && sdSnap == lastSdSnap;
+      bleHalf == lastBleHalf && wifiState == lastWifiState && bleState == lastBleState &&
+      tempBand == lastTempBand && sdSnap == lastSdSnap;
 
   if (wardBlinkOnly) {
     constexpr int kBarH   = 20;
@@ -599,7 +640,8 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
     return;
   }
 
-  if (battCh || wifiHalf != lastWifiHalf || bleHalf != lastBleHalf || tempBand != lastTempBand ||
+  if (battCh || wifiHalf != lastWifiHalf || bleHalf != lastBleHalf ||
+      wifiState != lastWifiState || bleState != lastBleState || tempBand != lastTempBand ||
       sdSnap != lastSdSnap || wardGpsIcon != lastWardGpsIcon ||
       (wardGpsIcon && wardBlinkPhase != lastWardBlinkPhase) || forceUpdate) {
     int barHeight = 20;
@@ -647,8 +689,8 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
       tft.drawBitmap(wardGpsX, iconY, bitmap_icon_satellite, iconW, iconW, TFT_ORANGE);
     }
 
-    uint16_t wifiColor = (wifiDevices > 0) ? TFT_GREEN : TFT_WHITE;
-    uint16_t bleColor  = (bleDevices  > 0) ? TFT_CYAN  : TFT_WHITE;
+    uint16_t wifiColor = statusBarRadioColor(wifiState, wifiDevices, TFT_GREEN);
+    uint16_t bleColor  = statusBarRadioColor(bleState, bleDevices, TFT_CYAN);
 
     int wifiStrength = 0;
     if (wifiDevices > 0) {
@@ -665,7 +707,7 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
       const int barX      = wifiX + i * 6;
 
       if (wifiStrength > i * 25) {
-        tft.fillRoundRect(barX, wifiY - sigBarH, barWidth, sigBarH, 1, TFT_GREEN);
+        tft.fillRoundRect(barX, wifiY - sigBarH, barWidth, sigBarH, 1, wifiColor);
       } else {
         tft.drawRoundRect(barX, wifiY - sigBarH, barWidth, sigBarH, 1, TFT_WHITE);
       }
@@ -695,6 +737,8 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
     lastBatteryPercentage = batteryPercentage;
     lastWifiHalf          = wifiHalf;
     lastBleHalf           = bleHalf;
+    lastWifiState         = wifiState;
+    lastBleState          = bleState;
     lastTempBand          = tempBand;
     lastSdSnap            = sdSnap;
     lastWardGpsIcon       = wardGpsIcon;
@@ -706,6 +750,8 @@ static void statusBarTask(void* ) {
   static int prevBattPct    = -1;
   static int prevWifiHalf   = -100000;
   static int prevBleHalf    = -100000;
+  static StatusBarRadioState prevWifiState = StatusBarRadioState::Off;
+  static StatusBarRadioState prevBleState  = StatusBarRadioState::Off;
   static int prevTempBand   = -100;
   static int prevSdSnap     = -1;
   static bool prevWardIcon  = false;
@@ -716,13 +762,16 @@ static void statusBarTask(void* ) {
     const float v = readBatteryVoltage();
     currentBatteryVoltage = v;
 
-    const int pct = constrain(::map((int)(v * 100.f), 300, 420, 0, 100), 0, 100);
+    const bool batteryKnown = isfinite(v) && v > 0.1f;
+    const int pct = batteryKnown ? constrain(::map((int)(v * 100.f), 300, 420, 0, 100), 0, 100) : -1;
     const int wifi  = WifiScan::getLastCount();
     const int ble   = BleScan::getLastCount();
     const int wifiH = wifi / 2;
     const int bleH  = ble / 2;
     const int tBand = statusBarTempBand(readInternalTemperature());
     const int sdSn  = sdCardPresent ? 1 : 0;
+    const StatusBarRadioState wifiState = getStatusBarWifiState();
+    const StatusBarRadioState bleState = getStatusBarBleState();
     const bool ward = GpsWardriver::statusBarGpsIconActive();
     const uint32_t wPh = ward ? (millis() / kStatusBarWardBlinkHalfMs) : 0u;
 
@@ -731,6 +780,9 @@ static void statusBarTask(void* ) {
       need = true;
     }
     if (wifiH != prevWifiHalf || bleH != prevBleHalf) {
+      need = true;
+    }
+    if (wifiState != prevWifiState || bleState != prevBleState) {
       need = true;
     }
     if (tBand != prevTempBand || sdSn != prevSdSnap) {
@@ -748,6 +800,8 @@ static void statusBarTask(void* ) {
       prevBattPct     = pct;
       prevWifiHalf    = wifiH;
       prevBleHalf     = bleH;
+      prevWifiState   = wifiState;
+      prevBleState    = bleState;
       prevTempBand    = tBand;
       prevSdSnap      = sdSn;
       prevWardIcon    = ward;

@@ -2,6 +2,8 @@
 
 #include <Adafruit_NeoPixel.h>
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "SettingsStore.h"
 #include "shared.h"
 
@@ -17,6 +19,8 @@ Event s_event = Event::BootOk;
 bool s_available = false;
 bool s_started = false;
 bool s_eventActive = false;
+volatile bool s_activityTaskRun = false;
+TaskHandle_t s_activityTask = nullptr;
 uint32_t s_lastFrameMs = 0;
 uint32_t s_eventUntilMs = 0;
 uint8_t s_phase = 0;
@@ -113,6 +117,31 @@ void renderEvent() {
       break;
   }
 }
+
+void activityTask(void*) {
+  while (s_activityTaskRun) {
+    loop();
+    vTaskDelay(pdMS_TO_TICKS(30));
+  }
+  s_activityTask = nullptr;
+  vTaskDelete(nullptr);
+}
+
+void startActivityTask() {
+  if (s_activityTask != nullptr) {
+    return;
+  }
+  s_activityTaskRun = true;
+  xTaskCreatePinnedToCore(
+    activityTask,
+    "statusLed",
+    2048,
+    nullptr,
+    1,
+    &s_activityTask,
+    0
+  );
+}
 }
 
 void begin() {
@@ -165,6 +194,22 @@ void loop() {
 void setMode(Mode mode) {
   s_mode = mode;
   s_phase = 0;
+  s_lastFrameMs = 0;
+  if (s_started && enabled()) {
+    renderMode();
+  }
+}
+
+void startActivity(Mode mode) {
+  setMode(mode);
+  if (s_started && enabled()) {
+    startActivityTask();
+  }
+}
+
+void stopActivity(Mode nextMode) {
+  s_activityTaskRun = false;
+  setMode(nextMode);
 }
 
 void event(Event event) {

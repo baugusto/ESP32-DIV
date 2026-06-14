@@ -27,6 +27,8 @@ enum class Event : uint8_t {
 void begin();
 void loop();
 void setMode(Mode mode);
+void startActivity(Mode mode);
+void stopActivity(Mode nextMode = Mode::Idle);
 void event(Event event);
 void off();
 }

@@ -13,3 +13,6 @@
 - Documented ESP32-DIV V2/V2.1 upload recovery settings for white-screen recovery.
 - Applied the recommended local TFT_eSPI V2 `User_Setup.h` configuration outside the repository to restore the TFT display.
 - Added non-blocking `StatusLedService` for 4 WS2812B LEDs, gated by `settings().neopixelEnabled`, and enabled the confirmed DIN pin on GPIO 1.
+- Started real status bar state handling for Wi-Fi/BLE activity and fixed unknown battery handling in the status task.
+- Updated foreground Wi-Fi/BLE scans to force status bar redraws and drive WS2812 scan modes during active scans.
+- Kept WS2812 scan animations alive during blocking Wi-Fi/BLE scans and preserved manual scan counts in the status bar.
