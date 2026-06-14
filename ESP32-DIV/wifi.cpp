@@ -4246,7 +4246,7 @@ static void deautherOpenTarget(int index) {
   drawAttackScreen();
 }
 
-extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
+extern "C" __attribute__((weak)) int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
     return 0;
 }
 

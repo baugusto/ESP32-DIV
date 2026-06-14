@@ -473,21 +473,24 @@ const float R1 = 100000.0;
 const float R2 = 100000.0;
 
 float readBatteryVoltage() {
+  #if !defined(BATTERY_ADC_PIN) || (BATTERY_ADC_PIN < 0)
+  return NAN;
+  #else
   const int sampleCount = 10;
   long sum = 0;
 
   for (int i = 0; i < sampleCount; i++) {
     sum += analogRead(BATTERY_ADC_PIN);
-    delay(5);
   }
 
   float averageADC = sum / (float)sampleCount;
 
-  float pinVoltage = (averageADC / 4095.0) * 2.2;
+  float pinVoltage = (averageADC / 4095.0f) * 3.3f;
 
-  float outputVoltage = pinVoltage * 2.0;
+  float outputVoltage = pinVoltage * ((BATTERY_VDIV_R1 + BATTERY_VDIV_R2) / BATTERY_VDIV_R2);
 
   return outputVoltage;
+  #endif
 }
 
 float readInternalTemperature() {
@@ -542,8 +545,12 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
   static bool lastWardGpsIcon      = false;
   static uint32_t lastWardBlinkPhase = 0;
 
-  int batteryPercentage = ::map(batteryVoltage * 100, 300, 420, 0, 100);
-  batteryPercentage = constrain(batteryPercentage, 0, 100);
+  const bool batteryKnown = isfinite(batteryVoltage) && batteryVoltage > 0.1f;
+  int batteryPercentage = -1;
+  if (batteryKnown) {
+    batteryPercentage = ::map(batteryVoltage * 100, 300, 420, 0, 100);
+    batteryPercentage = constrain(batteryPercentage, 0, 100);
+  }
 
   int wifiDevices = 0;
   int bleDevices  = 0;
@@ -604,15 +611,21 @@ void drawStatusBar(float batteryVoltage, bool forceUpdate, bool bottomSeparator)
     tft.drawRoundRect(x, y, 22, 10, 2, TFT_WHITE);
     tft.fillRect(x + 22, y + 3, 2, 4, TFT_WHITE);
 
-    int batteryLevelWidth = ::map(batteryPercentage, 0, 100, 0, 20);
-    uint16_t batteryColor = (batteryPercentage > 20) ? TFT_GREEN : TFT_RED;
-    tft.fillRoundRect(x + 2, y + 2, batteryLevelWidth, 6, 1, batteryColor);
+    int batteryLevelWidth = batteryKnown ? ::map(batteryPercentage, 0, 100, 0, 20) : 0;
+    uint16_t batteryColor = (!batteryKnown || batteryPercentage > 20) ? TFT_GREEN : TFT_RED;
+    if (batteryKnown) {
+      tft.fillRoundRect(x + 2, y + 2, batteryLevelWidth, 6, 1, batteryColor);
+    }
 
     tft.setCursor(x + 30, y + 2);
     tft.setTextColor(TFT_GREEN, UI_LABLE);
     tft.setTextFont(1);
     tft.setTextSize(1);
-    tft.print(String(batteryPercentage) + "%");
+    if (batteryKnown) {
+      tft.print(String(batteryPercentage) + "%");
+    } else {
+      tft.print("--%");
+    }
 
     const int iconW         = 16;
     const int gap           = 3;

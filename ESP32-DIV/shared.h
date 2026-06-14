@@ -248,7 +248,7 @@ static const uint8_t OBF_WB[]   = {75, 97, 110, 109, 122, 92, 109, 107, 96, 38, 
 /* Buzzer */
 #ifndef BUZZER_PIN
 // User hardware: buzzer on IO2
-#define BUZZER_PIN -1
+#define BUZZER_PIN 2
 #endif
 
 /* Backlight / PWM */
